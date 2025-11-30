@@ -22,6 +22,7 @@ import (
 	"errors"
 	"io/fs"
 	"net/http"
+	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -126,7 +127,13 @@ func (wd WebDAV) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 	//
 	// GET and HEAD, when applied to a collection, will behave the same as PROPFIND method.
 	if r.Method == http.MethodGet || r.Method == http.MethodHead {
-		info, err := wdHandler.FileSystem.Stat(context.TODO(), r.URL.Path)
+		fPath := r.URL.Path
+		if prefix != "" {
+			fPath = strings.TrimPrefix(fPath, prefix)
+		}
+		wd.logger.Error("path", zap.Error(err), zap.String("original", fPath))
+
+		info, err := wdHandler.FileSystem.Stat(context.TODO(), fPath)
 		if err == nil && info.IsDir() {
 			r.Method = "PROPFIND"
 			if r.Header.Get("Depth") == "" {
